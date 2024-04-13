@@ -1,10 +1,12 @@
 {% extends 'base.html' %}
 {% block title %}
-Features
+{{ title }}
 {% endblock %}
 
 {% block content %}
-
+    {{ title|capitalize }}
+    {{ title|remove_spaces }}
+    {{ my_num|square }}
     <h1 style="text-align: center">This is a Features Page</h1>
 {% endblock %}
 
