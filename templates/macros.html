@@ -1,0 +1,4 @@
+{% macro render_input(name, type='text', value='', placeholder='') %}
+    <input type="{{ type }}" name="{{ name }}"
+           placeholder="{{ placeholder }}" value="{{ value }}">
+{% endmacro %}

@@ -1,4 +1,4 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, request
 from jinja2 import Environment, PackageLoader, select_autoescape
 
 app = Flask(__name__)
@@ -7,15 +7,18 @@ env = Environment(
     autoescape=select_autoescape()
 )
 
-def remove_spaces(value:str):
+
+def remove_spaces(value: str):
     return value.replace(' ', '')
 
 
 def square(value):
-    return int(value)**2
+    return int(value) ** 2
+
 
 app.jinja_env.filters['remove_spaces'] = remove_spaces
 app.jinja_env.filters['square'] = square
+
 
 @app.route('/')
 @app.route('/home')
@@ -34,6 +37,12 @@ def features():
     my_num = 25
     return render_template('features.html', title=title, items=items,
                            my_num=my_num)
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    return render_template('login.html')
+
 
 
 if __name__ == '__main__':
