@@ -1,6 +1,8 @@
 from flask import Flask, render_template, request
 from jinja2 import Environment, PackageLoader, select_autoescape
 
+from forms import LoginForm
+
 app = Flask(__name__)
 env = Environment(
     loader=PackageLoader("flask-templates-mziuri"),
@@ -41,9 +43,17 @@ def features():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    return render_template('login.html')
+    form = LoginForm()
+    if request.method == 'POST':
+
+        if form.validate():
+            print('forma validuria')
+            return render_template('index.html')
+        print(form.errors)
+        return render_template('login.html', form=form)
+    return render_template('login.html', form=form)
 
 
-
+app.secret_key = 'ansdjasndjasjdnajsd9123n1'
 if __name__ == '__main__':
     app.run(debug=True)
