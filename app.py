@@ -1,9 +1,36 @@
-from flask import Flask, render_template, request, redirect, url_for
-
+from flask import Flask, render_template, \
+    request, redirect, url_for
+import sqlite3
 from forms import LoginForm, ContactForm
 
 app = Flask(__name__)
+conn = sqlite3.connect('sqlite.db')
+cursor = conn.cursor()
 
+cursor.execute("""create table if not exists users
+            (id integer primary key,
+            first_name text,
+            last_name text,
+            age integer,
+            email text,
+            password text)""")
+conn.commit()
+
+cursor.execute("""
+                create table if not exists laptops
+                (id integer primary key,
+                model text,
+                brand text,
+                year integer,
+                color text,
+                size real)
+                """
+               )
+conn.commit()
+
+
+# conn.close()
+# cursor.close()
 
 def remove_spaces(value: str):
     return value.replace(' ', '')
