@@ -1,13 +1,8 @@
-from flask import Flask, render_template, request
-from jinja2 import Environment, PackageLoader, select_autoescape
+from flask import Flask, render_template, request, redirect, url_for
 
-from forms import LoginForm
+from forms import LoginForm, ContactForm
 
 app = Flask(__name__)
-env = Environment(
-    loader=PackageLoader("flask-templates-mziuri"),
-    autoescape=select_autoescape()
-)
 
 
 def remove_spaces(value: str):
@@ -48,10 +43,15 @@ def login():
 
         if form.validate():
             print('forma validuria')
-            return render_template('index.html')
+            return redirect(url_for('home'))
         print(form.errors)
         return render_template('login.html', form=form)
     return render_template('login.html', form=form)
+
+
+@app.route('/contact')
+def contact():
+    form = ContactForm()
 
 
 app.secret_key = 'ansdjasndjasjdnajsd9123n1'
