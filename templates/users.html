@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block title %}
+Users Page
+{% endblock %}
+
+{% block content %}
+
+<table class="table">
+  <thead>
+    <tr>
+      <th scope="col">#</th>
+      <th scope="col">First</th>
+      <th scope="col">Last</th>
+      <th scope="col">Email</th>
+      <th scope="col">Age</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for user in users %}
+    <tr>
+      <th scope="row">{{loop.index}}</th>
+      <td>{{ user.first_name }} </td>
+      <td>{{ user.last_name }} </td>
+      <td>{{ user.email }}</td>
+      <td>{{ user.age }} </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+{% endblock %}

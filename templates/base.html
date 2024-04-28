@@ -19,10 +19,19 @@
 </head>
 <body>
 {% include 'components/header.html' %}
-
+{% with messages = get_flashed_messages() %}
+  {% if messages %}
+      <ul class=flashes>
+      {% for message in messages %}
+        <li>{{ message }}</li>
+      {% endfor %}
+      </ul>
+    {% endif %}
+  {% endwith %}
 {% block content %}
     this is a body tag
 {% endblock %}
+
 
 <!--{% include 'components/footer.html' %}-->
 <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
