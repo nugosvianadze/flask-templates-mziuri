@@ -53,12 +53,12 @@ def create_cursor(conn):
 
 
 
-conn = create_connection()
-cursor = create_cursor(conn)
-for _ in range(30):
-    add_user(faker.first_name(), faker.last_name(), faker.email(), 20, faker.password())
-conn.commit()
-conn.close()
+# conn = create_connection()
+# cursor = create_cursor(conn)
+# for _ in range(30):
+#     add_user(faker.first_name(), faker.last_name(), faker.email(), 20, faker.password())
+# conn.commit()
+# conn.close()
 
 def remove_spaces(value: str):
     return value.replace(' ', '')
