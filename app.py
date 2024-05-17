@@ -4,42 +4,18 @@ from faker import Faker
 from flask import Flask, render_template, \
     request, redirect, url_for, flash
 import sqlite3
-from forms import LoginForm, ContactForm, RegistrationForm
+from forms import LoginForm, ContactForm, RegistrationForm, UserUpdateForm
 
 app = Flask(__name__)
 
 faker = Faker('ka_GE')
 
 
-def add_user(first_name, last_name, email, age, password):
-    cursor.execute("""
-                insert into users (first_name, last_name, email, age, password) values 
-                (?, ?, ?, ?, ?)
-                """, (first_name, last_name, email, age, password))
-# cursor.execute("""create table if not exists users
-#             (id integer primary key,
-#             first_name text,
-#             last_name text,
-#             age integer,
-#             email text,
-#             password text)""")
-# conn.commit()
-#
-# cursor.execute("""
-#                 create table if not exists laptops
-#                 (id integer primary key,
-#                 model text,
-#                 brand text,
-#                 year integer,
-#                 color text,
-#                 size real)
-#                 """
-#                )
-# conn.commit()
-
-
-# conn.close()
-# cursor.close()
+# def add_user(first_name, last_name, email, age, password):
+#     cursor.execute("""
+#                 insert into users (first_name, last_name, email, age, password) values
+#                 (?, ?, ?, ?, ?)
+#                 """, (first_name, last_name, email, age, password))
 
 
 def create_connection():
@@ -52,6 +28,8 @@ def create_cursor(conn):
     return conn.cursor()
 
 
+def close_connection(conn):
+    return conn.close()
 
 # conn = create_connection()
 # cursor = create_cursor(conn)
@@ -75,7 +53,7 @@ app.jinja_env.filters['square'] = square
 @app.route('/')
 @app.route('/home')
 def home():
-    first_name, last_name = 'Nugo', 'Svianadze'
+    first_name, last_name = 'Nugoooo', 'Svianadze'
     title = 'Home Page'
     my_num = 25
     return render_template('index.html', first_name=first_name,
@@ -146,9 +124,57 @@ def users():
     select * from users
     """)
     users = cursor.fetchall()
+    conn.close()
     return render_template('users.html', users=users)
 
 
+@app.route('/update_user/<int:user_id>', methods=['GET', 'POST'])
+def update_user(user_id):
+    form = UserUpdateForm()
+
+    conn = create_connection()
+    cursor = create_cursor(conn)
+    user = cursor.execute(
+        """
+        select * from users where id = ? 
+        """,
+        (user_id, )
+    )
+    user = user.fetchone()
+    close_connection(conn)
+    if request.method == 'POST':
+        first_name = form.first_name.data
+        last_name = form.last_name.data
+        age = form.age.data
+        conn = create_connection()
+        cursor = create_cursor(conn)
+        cursor.execute("""
+        update users set first_name = ?, last_name = ?, age = ? where id = ?
+        """, (first_name, last_name, age, user_id))
+        conn.commit()
+        close_connection(conn)
+        flash('User Successfuly Updated!')
+        return redirect(url_for('update_user', user_id=user_id))
+    return render_template('user_update.html', form=form, user=user)
+
+
+@app.route('/delete_user/<int:user_id>')
+def delete_user(user_id):
+
+    conn = create_connection()
+    cursor = create_cursor(conn)
+
+    user = cursor.execute("""
+    select * from users where id = ?
+    """, (user_id,))
+    if not user.fetchone():
+        flash('User With This ID Does Not Exist!')
+        return redirect(url_for('users'))
+    cursor.execute("delete from users where id = ?", (user_id,))
+    flash('User Successfully Deleted!!!!!!!!!!!!!!!!!!!!!!!')
+    conn.commit()
+    close_connection(conn)
+    return redirect(url_for('users'))
 app.secret_key = 'ansdjasndjasjdnajsd9123n1'
 if __name__ == '__main__':
     app.run(debug=True)

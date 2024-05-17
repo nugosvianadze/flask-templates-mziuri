@@ -3,9 +3,9 @@
            placeholder="{{ placeholder }}" value="{{ value }}">
 {% endmacro %}
 
-{% macro render_field(field) %}
+{% macro render_field(field, value='') %}
   <dt>{{ field.label }}
-  <dd>{{ field(**kwargs)|safe }}
+  <dd>{{ field(value=value, **kwargs)|safe }}
   {% if field.errors %}
     <ul class=errors>
     {% for error in field.errors %}

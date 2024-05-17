@@ -34,4 +34,9 @@ class ContactForm(FlaskForm):
 
 class RegistrationForm(LoginForm):
     age = IntegerField('Age', validators=[data_required()], render_kw={'class': 'form-control',
-                                                                       'placeholder': 'შეიყვანეთ ასაკი'})
+    'placeholder': 'შეიყვანეთ ასაკი'})
+
+
+class UserUpdateForm(RegistrationForm):
+    email = None
+    password = None
