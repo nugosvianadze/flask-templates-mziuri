@@ -1,5 +1,8 @@
-from sqlite3 import Cursor
 from faker import Faker
+
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy import Integer, String, SmallInteger, BigInteger
 
 from flask import Flask, render_template, \
     request, redirect, url_for, flash
@@ -11,11 +14,38 @@ app = Flask(__name__)
 faker = Faker('ka_GE')
 
 
+class Base(DeclarativeBase):
+  pass
+
+
+db = SQLAlchemy(model_class=Base)
+
 # def add_user(first_name, last_name, email, age, password):
 #     cursor.execute("""
 #                 insert into users (first_name, last_name, email, age, password) values
 #                 (?, ?, ?, ?, ?)
 #                 """, (first_name, last_name, email, age, password))
+
+
+# configure the SQLite database, relative to the app instance folder
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///sqlite.db"
+# initialize the app with the extension
+db.init_app(app)
+
+
+class User(db.Model):
+    id: Mapped[int] = mapped_column(primary_key=True)
+    first_name: Mapped[str] = mapped_column(String(50))
+    last_name: Mapped[str]
+    age: Mapped[int]
+    address: Mapped[str]
+
+#
+# with app.app_context():
+#     print('Creating Database and Models....')
+#     db.create_all()
+#     print('Created Tables....')
+
 
 
 def create_connection():
@@ -92,24 +122,36 @@ def register():
             email = form.email.data
             age = form.age.data
             password = form.password.data
-            conn = create_connection()
-            cursor = create_cursor(conn)
-            cursor.execute("""
-            select * from users where email = ?
-            """, (email,))
-            user_exists = cursor.fetchone()
-            conn.close()
-            if user_exists is not None:
+            # conn = create_connection()
+            # cursor = create_cursor(conn)
+            # cursor.execute("""
+            # select * from users where email = ?
+            # """, (email,))
+            # user_exists = cursor.fetchone()
+            # conn.close()
+            print(first_name)
+            user = User.query.filter_by(first_name=first_name).first()
+            user.first_name = 'sdas'
+
+            print(user)
+            if user is not None:
                 flash('User With This Email Already Exists!')
-                return render_template('register.html', form=form, user=user_exists)
-            conn = create_connection()
-            cursor = create_cursor(conn)
-            cursor.execute("""
-            insert into users (first_name, last_name, email, age, password) values 
-            (?, ?, ?, ?, ?)
-            """, (first_name, last_name, email, age, password))
-            conn.commit()
-            conn.close()
+                return render_template('register.html', form=form, user=user)
+
+            # conn = create_connection()
+            # cursor = create_cursor(conn)
+            # cursor.execute("""
+            # insert into users (first_name, last_name, email, age, password) values
+            # (?, ?, ?, ?, ?)
+            # """, (first_name, last_name, email, age, password))
+            # conn.commit()
+            # conn.close()
+            users_list = []
+            for _ in range(5):
+                users_list.append(User(first_name=first_name + str(_), last_name=last_name + str(_),
+                                       age=age + _, address='Tbilisi'))
+            db.session.add_all(users_list)
+            db.session.commit()
             flash('User Successfully Created!!')
             return redirect(url_for('home'))
         return render_template('register.html', form=form)
@@ -118,14 +160,10 @@ def register():
 
 @app.route('/users')
 def users():
-    conn = create_connection()
-    cursor = create_cursor(conn)
-    cursor.execute("""
-    select * from users
-    """)
-    users = cursor.fetchall()
-    conn.close()
-    return render_template('users.html', users=users)
+    user_data = db.session.execute(db.select(User).order_by(User.first_name)).scalars().all()
+    user_data = User.query.order_by(User.first_name)
+    user_data = db.session.query(User).order_by(User.first_name)
+    return render_template('users.html', users=user_data)
 
 
 @app.route('/update_user/<int:user_id>', methods=['GET', 'POST'])
