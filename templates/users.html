@@ -20,7 +20,7 @@ Users Page
   {% for user in users %}
     <tr>
       <th scope="row">{{loop.index}}</th>
-      <td>{{ user.first_name }} </td>
+      <td><a href="{{ url_for('user_posts', user_id=user.id) }}" style="color: black;">{{ user.first_name }}</a> </td>
       <td>{{ user.last_name }} </td>
       <td>{{ user.email }}</td>
       <td>{{ user.age }} </td>

@@ -2,12 +2,14 @@ from faker import Faker
 
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from sqlalchemy import Integer, String, SmallInteger, BigInteger
+from sqlalchemy import Integer, String, SmallInteger, BigInteger, DateTime, Date
 
 from flask import Flask, render_template, \
     request, redirect, url_for, flash
 import sqlite3
+import datetime
 from forms import LoginForm, ContactForm, RegistrationForm, UserUpdateForm
+from forms import PostForm
 
 app = Flask(__name__)
 
@@ -34,11 +36,23 @@ db.init_app(app)
 
 
 class User(db.Model):
+    __tablename__ = 'users'
     id: Mapped[int] = mapped_column(primary_key=True)
     first_name: Mapped[str] = mapped_column(String(50))
     last_name: Mapped[str] = mapped_column(unique=True, nullable=False)
     age: Mapped[int] = mapped_column(SmallInteger)
     address: Mapped[str]
+
+
+class Post(db.Model):
+    __tablename__ = 'posts'
+    id: Mapped[int] = mapped_column(primary_key=True)
+    title: Mapped[str] = mapped_column(String(100), nullable=False)
+    content: Mapped[str]
+    image: Mapped[str]
+    created_at = mapped_column(DateTime, default=datetime.datetime.now)
+    user_id: Mapped[int] = mapped_column(db.ForeignKey('users.id', ondelete='CASCADE'))
+    user = db.relationship('User', backref='posts')
 
 #
 # with app.app_context():
@@ -95,27 +109,27 @@ def login():
 def register():
     form = RegistrationForm()
     if request.method == 'POST':
+        print(form.validate_on_submit())
         if form.validate_on_submit():
             first_name = form.first_name.data
             last_name = form.last_name.data
             email = form.email.data
             age = form.age.data
             password = form.password.data
+            address = form.address.data
             user = User.query.filter_by(first_name=first_name).first()
-            user.first_name = 'sdas'
 
             if user is not None:
                 flash('User With This Email Already Exists!')
                 return render_template('register.html', form=form, user=user)
 
-            users_list = []
-            for _ in range(5):
-                users_list.append(User(first_name=first_name + str(_), last_name=last_name + str(_),
-                                       age=age + _, address='Tbilisi'))
-            db.session.add_all(users_list)
+            user = User(first_name=first_name, last_name=last_name,
+                        age=age, address=address)
+            db.session.add(user)
             db.session.commit()
             flash('User Successfully Created!!')
             return redirect(url_for('home'))
+        print(form.errors)
         return render_template('register.html', form=form)
     return render_template('register.html', form=form)
 
@@ -163,11 +177,42 @@ def delete_user(user_id):
     db.session.delete(user)
     db.session.commit()
     flash(f'User {user.first_name} Successfully Deleted!!')
-    # cursor.execute("delete from users where id = ?", (user_id,))
-    # flash('User Successfully Deleted!!!!!!!!!!!!!!!!!!!!!!!')
-    # conn.commit()
-    # close_connection(conn)
     return redirect(url_for('users'))
+
+
+@app.route('/user-posts/<int:user_id>')
+def user_posts(user_id):
+    user = User.query.get(user_id)
+    if not user:
+        flash(f'User With ID={user_id} Does Not Exists!')
+        return redirect(url_for('users'))
+    posts = user.posts
+    return render_template('posts.html', posts=posts, user_id=user_id)
+
+
+@app.route('/create_posts/<int:user_id>', methods=['GET', 'POST'])
+def create_post(user_id):
+    form = PostForm()
+    user = User.query.get(user_id)
+    if not user:
+        flash(f'User With ID={user_id} Does Not Exists!')
+        return redirect(url_for('users'))
+
+    if request.method == 'POST':
+        if form.validate_on_submit():
+            title = form.title.data
+            content = form.content.data
+            post = Post(title=title, content=content, image='image.png')
+            user.posts.append(post)
+            db.session.add(post)
+            db.session.commit()
+            flash('Post Successfuly Added')
+            return redirect(url_for('user_posts', user_id=user_id))
+        return render_template('create_post.html', form=form)
+
+    return render_template('create_post.html', form=form, user_id=user_id)
+
+
 app.secret_key = 'ansdjasndjasjdnajsd9123n1'
 if __name__ == '__main__':
     app.run(debug=True)

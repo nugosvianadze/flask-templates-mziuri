@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
 from wtforms import FormField
-from wtforms.fields import StringField, EmailField, PasswordField, SubmitField, IntegerField
+from wtforms.fields import StringField, EmailField, PasswordField, SubmitField, IntegerField, TextAreaField
 from wtforms.validators import data_required, length, email, ValidationError
 
 
@@ -35,8 +35,18 @@ class ContactForm(FlaskForm):
 class RegistrationForm(LoginForm):
     age = IntegerField('Age', validators=[data_required()], render_kw={'class': 'form-control',
     'placeholder': 'შეიყვანეთ ასაკი'})
+    address = StringField('Address', validators=[data_required()],
+                          render_kw={'placeholder': 'შეიყვანეთ მისამართ', 'class': 'form-control'})
 
 
 class UserUpdateForm(RegistrationForm):
     email = None
     password = None
+
+
+class PostForm(FlaskForm):
+    title = StringField('Title', validators=[data_required()],
+                        render_kw={'placeholder': 'შეიყვანეთ პოსტის სათაური', 'class': 'form-control'})
+    content = TextAreaField('Title', validators=[data_required()],
+                        render_kw={'placeholder': 'შეიყვანეთ პოსტის კონტენტი', 'class': 'form-control'})
+    submit = SubmitField('Create Post', render_kw={'class': 'btn btn-primary', 'style': 'text-align: center;'})
