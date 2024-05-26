@@ -15,7 +15,7 @@ faker = Faker('ka_GE')
 
 
 class Base(DeclarativeBase):
-  pass
+    pass
 
 
 db = SQLAlchemy(model_class=Base)
@@ -36,8 +36,8 @@ db.init_app(app)
 class User(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
     first_name: Mapped[str] = mapped_column(String(50))
-    last_name: Mapped[str]
-    age: Mapped[int]
+    last_name: Mapped[str] = mapped_column(unique=True, nullable=False)
+    age: Mapped[int] = mapped_column(SmallInteger)
     address: Mapped[str]
 
 #
@@ -46,27 +46,6 @@ class User(db.Model):
 #     db.create_all()
 #     print('Created Tables....')
 
-
-
-def create_connection():
-    conn = sqlite3.connect('sqlite.db', check_same_thread=False)
-    conn.row_factory = sqlite3.Row
-    return conn
-
-
-def create_cursor(conn):
-    return conn.cursor()
-
-
-def close_connection(conn):
-    return conn.close()
-
-# conn = create_connection()
-# cursor = create_cursor(conn)
-# for _ in range(30):
-#     add_user(faker.first_name(), faker.last_name(), faker.email(), 20, faker.password())
-# conn.commit()
-# conn.close()
 
 def remove_spaces(value: str):
     return value.replace(' ', '')
@@ -122,30 +101,13 @@ def register():
             email = form.email.data
             age = form.age.data
             password = form.password.data
-            # conn = create_connection()
-            # cursor = create_cursor(conn)
-            # cursor.execute("""
-            # select * from users where email = ?
-            # """, (email,))
-            # user_exists = cursor.fetchone()
-            # conn.close()
-            print(first_name)
             user = User.query.filter_by(first_name=first_name).first()
             user.first_name = 'sdas'
 
-            print(user)
             if user is not None:
                 flash('User With This Email Already Exists!')
                 return render_template('register.html', form=form, user=user)
 
-            # conn = create_connection()
-            # cursor = create_cursor(conn)
-            # cursor.execute("""
-            # insert into users (first_name, last_name, email, age, password) values
-            # (?, ?, ?, ?, ?)
-            # """, (first_name, last_name, email, age, password))
-            # conn.commit()
-            # conn.close()
             users_list = []
             for _ in range(5):
                 users_list.append(User(first_name=first_name + str(_), last_name=last_name + str(_),
@@ -160,9 +122,10 @@ def register():
 
 @app.route('/users')
 def users():
-    user_data = db.session.execute(db.select(User).order_by(User.first_name)).scalars().all()
-    user_data = User.query.order_by(User.first_name)
-    user_data = db.session.query(User).order_by(User.first_name)
+    # stmt = db.select(User).where(User.age > 18).order_by(User.age)
+    # user_data = db.session.execute(stmt).scalars().all()
+    user_data = User.query.all()
+    # user_data = db.session.query(User).where(User.age > 18).all()
     return render_template('users.html', users=user_data)
 
 
@@ -170,27 +133,19 @@ def users():
 def update_user(user_id):
     form = UserUpdateForm()
 
-    conn = create_connection()
-    cursor = create_cursor(conn)
-    user = cursor.execute(
-        """
-        select * from users where id = ? 
-        """,
-        (user_id, )
-    )
-    user = user.fetchone()
-    close_connection(conn)
+    user = User.query.get(user_id)
+    # user = db.get_or_404(User, user_id)
+    if user is None:
+        flash(f'User With ID={user_id} Does Not Exists!')
+        return redirect(url_for('users'))
     if request.method == 'POST':
         first_name = form.first_name.data
         last_name = form.last_name.data
         age = form.age.data
-        conn = create_connection()
-        cursor = create_cursor(conn)
-        cursor.execute("""
-        update users set first_name = ?, last_name = ?, age = ? where id = ?
-        """, (first_name, last_name, age, user_id))
-        conn.commit()
-        close_connection(conn)
+        user.first_name = first_name
+        user.last_name = last_name
+        user.age = age
+        db.session.commit()
         flash('User Successfuly Updated!')
         return redirect(url_for('update_user', user_id=user_id))
     return render_template('user_update.html', form=form, user=user)
@@ -199,19 +154,19 @@ def update_user(user_id):
 @app.route('/delete_user/<int:user_id>')
 def delete_user(user_id):
 
-    conn = create_connection()
-    cursor = create_cursor(conn)
-
-    user = cursor.execute("""
-    select * from users where id = ?
-    """, (user_id,))
-    if not user.fetchone():
-        flash('User With This ID Does Not Exist!')
+    user = User.query.get(user_id)
+    # user = db.get_or_404(User, user_id)
+    if user is None:
+        flash(f'User With ID={user_id} Does Not Exists!')
         return redirect(url_for('users'))
-    cursor.execute("delete from users where id = ?", (user_id,))
-    flash('User Successfully Deleted!!!!!!!!!!!!!!!!!!!!!!!')
-    conn.commit()
-    close_connection(conn)
+
+    db.session.delete(user)
+    db.session.commit()
+    flash(f'User {user.first_name} Successfully Deleted!!')
+    # cursor.execute("delete from users where id = ?", (user_id,))
+    # flash('User Successfully Deleted!!!!!!!!!!!!!!!!!!!!!!!')
+    # conn.commit()
+    # close_connection(conn)
     return redirect(url_for('users'))
 app.secret_key = 'ansdjasndjasjdnajsd9123n1'
 if __name__ == '__main__':
