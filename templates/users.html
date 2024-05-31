@@ -11,8 +11,9 @@ Users Page
       <th scope="col">#</th>
       <th scope="col">First</th>
       <th scope="col">Last</th>
-      <th scope="col">Email</th>
+      <th scope="col">Id Number</th>
       <th scope="col">Age</th>
+      <th scope="col">Posts</th>
       <th scope="col">Actions</th>
     </tr>
   </thead>
@@ -20,10 +21,11 @@ Users Page
   {% for user in users %}
     <tr>
       <th scope="row">{{loop.index}}</th>
-      <td><a href="{{ url_for('user_posts', user_id=user.id) }}" style="color: black;">{{ user.first_name }}</a> </td>
+      <td>{{ user.first_name }}</td>
       <td>{{ user.last_name }} </td>
-      <td>{{ user.email }}</td>
+      <td>{{ user.id_card.id_number }}</td>
       <td>{{ user.age }} </td>
+      <td><a href="{{ url_for('user_posts', user_id=user.id) }}" style="color: black;">{{ user.posts|length }}</a> </td>
       <td>
         <a href="{{ url_for('update_user', user_id=user.id) }}">
           <img src="{{ url_for('static', filename = 'images/update.png') }}" alt="update" width="20" height="20">
@@ -31,7 +33,7 @@ Users Page
         <a href="#" data-bs-toggle="modal" data-bs-target="#exampleModal{{user.id}}">
             <img src="{{ url_for('static', filename = 'images/delete.png') }}" alt="delete" width="20" height="20">
         </a>
-
+        <a href="{{ url_for('create_id', user_id=user.id) }}" style="color: black; font-size: 20px">+</a>
       </td>
     </tr>
   <div class="modal fade" id="exampleModal{{user.id}}" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">

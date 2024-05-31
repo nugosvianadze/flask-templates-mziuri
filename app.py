@@ -1,4 +1,5 @@
 from faker import Faker
+from random import randrange
 
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -22,17 +23,18 @@ class Base(DeclarativeBase):
 
 db = SQLAlchemy(model_class=Base)
 
-# def add_user(first_name, last_name, email, age, password):
-#     cursor.execute("""
-#                 insert into users (first_name, last_name, email, age, password) values
-#                 (?, ?, ?, ?, ?)
-#                 """, (first_name, last_name, email, age, password))
-
 
 # configure the SQLite database, relative to the app instance folder
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///sqlite.db"
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///blog.db"
 # initialize the app with the extension
 db.init_app(app)
+
+
+user_roles_m2m = db.Table(
+    "user_role",
+    db.Column("user_id", db.ForeignKey('users.id'), primary_key=True),
+    db.Column("role_id", db.ForeignKey('roles.id'), primary_key=True),
+)
 
 
 class User(db.Model):
@@ -42,6 +44,8 @@ class User(db.Model):
     last_name: Mapped[str] = mapped_column(unique=True, nullable=False)
     age: Mapped[int] = mapped_column(SmallInteger)
     address: Mapped[str]
+    id_card: Mapped['IdCard'] = db.relationship('IdCard', back_populates='user', uselist=False)
+    roles = db.relationship('Role', secondary=user_roles_m2m, backref=db.backref('users', lazy='dynamic'))
 
 
 class Post(db.Model):
@@ -54,11 +58,27 @@ class Post(db.Model):
     user_id: Mapped[int] = mapped_column(db.ForeignKey('users.id', ondelete='CASCADE'))
     user = db.relationship('User', backref='posts')
 
-#
-# with app.app_context():
-#     print('Creating Database and Models....')
-#     db.create_all()
-#     print('Created Tables....')
+
+class IdCard(db.Model):
+    __tablename__ = 'id_cards'
+    id: Mapped[int] = mapped_column(primary_key=True)
+    id_number: Mapped[int]
+    created_at = mapped_column(DateTime)
+    expire_at = mapped_column(DateTime)
+    user_id: Mapped[int] = mapped_column(db.ForeignKey('users.id', ondelete='CASCADE'), unique=True)
+    user = db.relationship('User', back_populates='id_card')
+
+
+class Role(db.Model):
+    __tablename__ = 'roles'
+    id: Mapped[int] = mapped_column(primary_key=True)
+    title: Mapped[str]
+
+
+with app.app_context():
+    print('Creating Database and Models....')
+    db.create_all()
+    print('Created Tables....')
 
 
 def remove_spaces(value: str):
@@ -211,6 +231,30 @@ def create_post(user_id):
         return render_template('create_post.html', form=form)
 
     return render_template('create_post.html', form=form, user_id=user_id)
+
+
+@app.route('/create-id-card/<int:user_id>')
+def create_id(user_id):
+    user = User.query.get(user_id)
+    if not user:
+        flash(f'User With ID={user_id} Does Not Exists!')
+        return redirect(url_for('users'))
+    id_card = IdCard(id_number=randrange(10000, 32000), created_at=datetime.datetime(2024, 5, 5, 0, 0, 0),
+                     expire_at=datetime.datetime(2027, 5, 5, 0, 0, 0), user=user)
+    db.session.add(id_card)
+    db.session.commit()
+    flash('id card successfully created for user ', user.first_name)
+    return redirect(url_for('users'))
+
+
+@app.route('/add_roles')
+def add_roles():
+    user_role = Role(title='User')
+    admin_role = Role(title='Admin')
+    db.session.add_all([user_role, admin_role])
+    db.session.commit()
+    flash(f'roles {user_role.title} and {admin_role.title} successfully created!')
+    return redirect(url_for('users'))
 
 
 app.secret_key = 'ansdjasndjasjdnajsd9123n1'
