@@ -9,10 +9,12 @@ Users Page
   <thead>
     <tr>
       <th scope="col">#</th>
+      <th scope="col">Profile Pic</th>
       <th scope="col">First</th>
       <th scope="col">Last</th>
       <th scope="col">Id Number</th>
       <th scope="col">Age</th>
+      <th scope="col">Roles</th>
       <th scope="col">Posts</th>
       <th scope="col">Actions</th>
     </tr>
@@ -21,10 +23,16 @@ Users Page
   {% for user in users %}
     <tr>
       <th scope="row">{{loop.index}}</th>
+      {% if user.profile_picture %}
+      <td><img src="{{ url_for('static', filename='uploads/' + user.profile_picture) }}" alt="" class="prof_pic"> </td>
+      {% else %}
+      <td>None</td>
+      {% endif %}
       <td>{{ user.first_name }}</td>
       <td>{{ user.last_name }} </td>
       <td>{{ user.id_card.id_number }}</td>
       <td>{{ user.age }} </td>
+      <td>{{ user.roles|join(', ') }} </td>
       <td><a href="{{ url_for('user_posts', user_id=user.id) }}" style="color: black;">{{ user.posts|length }}</a> </td>
       <td>
         <a href="{{ url_for('update_user', user_id=user.id) }}">

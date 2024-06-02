@@ -1,16 +1,23 @@
 from faker import Faker
 from random import randrange
 
+import click
+
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy import Integer, String, SmallInteger, BigInteger, DateTime, Date
+from flask_migrate import Migrate
 
 from flask import Flask, render_template, \
     request, redirect, url_for, flash
 import sqlite3
 import datetime
+
+from werkzeug.utils import secure_filename
+
 from forms import LoginForm, ContactForm, RegistrationForm, UserUpdateForm
 from forms import PostForm
+from enums import RoleEnum
 
 app = Flask(__name__)
 
@@ -22,12 +29,13 @@ class Base(DeclarativeBase):
 
 
 db = SQLAlchemy(model_class=Base)
-
+migrate = Migrate()
 
 # configure the SQLite database, relative to the app instance folder
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///blog.db"
 # initialize the app with the extension
 db.init_app(app)
+migrate.init_app(app, db)
 
 
 user_roles_m2m = db.Table(
@@ -37,11 +45,22 @@ user_roles_m2m = db.Table(
 )
 
 
+@app.cli.command("create_roles")
+def create_roles():
+    roles = []
+    for role in RoleEnum:
+        roles.append(Role(title=role.value))
+    db.session.add_all(roles)
+    db.session.commit()
+    click.echo('Role Successfully Created!!')
+
+
 class User(db.Model):
     __tablename__ = 'users'
     id: Mapped[int] = mapped_column(primary_key=True)
     first_name: Mapped[str] = mapped_column(String(50))
     last_name: Mapped[str] = mapped_column(unique=True, nullable=False)
+    profile_picture: Mapped[str] = mapped_column(nullable=True)
     age: Mapped[int] = mapped_column(SmallInteger)
     address: Mapped[str]
     id_card: Mapped['IdCard'] = db.relationship('IdCard', back_populates='user', uselist=False)
@@ -74,11 +93,16 @@ class Role(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
     title: Mapped[str]
 
+    def __str__(self):
+        return self.title
 
-with app.app_context():
-    print('Creating Database and Models....')
-    db.create_all()
-    print('Created Tables....')
+    def __repr__(self):
+        return self.title
+
+# with app.app_context():
+#     print('Creating Database and Models....')
+#     db.create_all()
+#     print('Created Tables....')
 
 
 def remove_spaces(value: str):
@@ -129,22 +153,33 @@ def login():
 def register():
     form = RegistrationForm()
     if request.method == 'POST':
-        print(form.validate_on_submit())
+        print(form.data)
         if form.validate_on_submit():
             first_name = form.first_name.data
             last_name = form.last_name.data
-            email = form.email.data
             age = form.age.data
-            password = form.password.data
             address = form.address.data
+            form_roles = form.roles.data
+            profile_picture = form.profile_picture.data
+
+            filename = secure_filename(profile_picture.filename)
+            profile_picture.save('static/uploads/' + filename)
+
             user = User.query.filter_by(first_name=first_name).first()
 
+            db_roles = Role.query.filter(Role.title.in_(form_roles)).all()
+            print(db_roles)
+            if len(db_roles) != len(form_roles):
+                flash('Some Roles Does Not Exsist!!!')
+                return render_template('register.html', form=form, user=user)
+
             if user is not None:
-                flash('User With This Email Already Exists!')
+                flash('User With This First Name Already Exists!')
                 return render_template('register.html', form=form, user=user)
 
             user = User(first_name=first_name, last_name=last_name,
-                        age=age, address=address)
+                        age=age, address=address, profile_picture=filename)
+            user.roles.extend(db_roles)
             db.session.add(user)
             db.session.commit()
             flash('User Successfully Created!!')
@@ -238,6 +273,11 @@ def create_id(user_id):
     user = User.query.get(user_id)
     if not user:
         flash(f'User With ID={user_id} Does Not Exists!')
+        return redirect(url_for('users'))
+    if user.id_card:
+        flash(
+            'That User ALready Has Id Card'
+        )
         return redirect(url_for('users'))
     id_card = IdCard(id_number=randrange(10000, 32000), created_at=datetime.datetime(2024, 5, 5, 0, 0, 0),
                      expire_at=datetime.datetime(2027, 5, 5, 0, 0, 0), user=user)

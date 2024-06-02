@@ -5,7 +5,7 @@ Registration Page
 
 {% block content %}
 <div style="display: flex; justify-content: center;">
-  <form action="{{ url_for('register') }}" method="post" style="width: 30%;">
+  <form action="{{ url_for('register') }}" method="post" style="width: 30%;" enctype="multipart/form-data">
     {{ form.hidden_tag() }}
     {% from 'macros.html' import render_field %}
   <div class="mb-3">
@@ -35,6 +35,12 @@ Registration Page
     {{ render_field(form.roles) }}
 
   </div>
+    <div class="mb-3">
+    {{ render_field(form.profile_picture) }}
+
+  </div>
+
+
       {{ form.submit }}
 </form>
 </div>

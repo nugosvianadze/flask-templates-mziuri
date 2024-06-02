@@ -6,6 +6,10 @@ body{
   margin: 0;
   padding: 0;
 }
+.prof_pic {
+width: 30px;
+height: 30px;
+}
 a {
   color: #fff;
   text-decoration: none;
