@@ -11,11 +11,8 @@ def validate_length(form, field):
     if 50 <= len(field.data) or len(field.data) < 5:
         raise ValidationError('Field Length Must Be in range (5, 50)')
 
+
 class LoginForm(FlaskForm):
-    first_name = StringField('First Name', validators=[data_required()],
-                             render_kw={'placeholder': 'შეიყვანეთ სახელი', 'class': 'form-control'})
-    last_name = StringField('Last Name', validators=[data_required()],
-                            render_kw={'placeholder': 'შეიყვანეთ გვარი', 'class': 'form-control'})
     email = EmailField('Email', validators=[data_required(), length(9, 80), email()],
                        render_kw={'placeholder': 'შეიყვანეთ ემეილი', 'class': 'form-control'})
     password = PasswordField('Password', validators=[data_required()],
@@ -36,6 +33,10 @@ class ContactForm(FlaskForm):
 
 
 class RegistrationForm(LoginForm):
+    first_name = StringField('First Name', validators=[data_required()],
+                             render_kw={'placeholder': 'შეიყვანეთ სახელი', 'class': 'form-control'})
+    last_name = StringField('Last Name', validators=[data_required()],
+                            render_kw={'placeholder': 'შეიყვანეთ გვარი', 'class': 'form-control'})
     age = IntegerField('Age', validators=[data_required()], render_kw={'class': 'form-control',
     'placeholder': 'შეიყვანეთ ასაკი'})
     address = StringField('Address', validators=[data_required()],

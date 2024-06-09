@@ -33,7 +33,7 @@ Users Page
       <td>{{ user.id_card.id_number }}</td>
       <td>{{ user.age }} </td>
       <td>{{ user.roles|join(', ') }} </td>
-      <td><a href="{{ url_for('user_posts', user_id=user.id) }}" style="color: black;">{{ user.posts|length }}</a> </td>
+      <td><a href="{{ url_for('user_posts', user_id=user.id) }}" style="color: black;">{{ user.posts.all()|length }}</a> </td>
       <td>
         <a href="{{ url_for('update_user', user_id=user.id) }}">
           <img src="{{ url_for('static', filename = 'images/update.png') }}" alt="update" width="20" height="20">

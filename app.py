@@ -2,14 +2,17 @@ from faker import Faker
 from random import randrange
 
 import click
+from functools import wraps
 
+from flask_admin import Admin
+from flask_admin.contrib.sqla import ModelView
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy import Integer, String, SmallInteger, BigInteger, DateTime, Date
 from flask_migrate import Migrate
 
 from flask import Flask, render_template, \
-    request, redirect, url_for, flash
+    request, redirect, url_for, flash, session
 import sqlite3
 import datetime
 
@@ -29,10 +32,13 @@ class Base(DeclarativeBase):
 
 
 db = SQLAlchemy(model_class=Base)
-migrate = Migrate()
+migrate = Migrate(render_as_batch=True)
+admin = Admin(app, name='Mziuri', template_mode='bootstrap3')
 
 # configure the SQLite database, relative to the app instance folder
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///blog.db"
+app.config['PERMANENT_SESSION_LIFETIME'] = datetime.timedelta(days=1)
+app.config['FLASK_ADMIN_SWATCH'] = 'cerulean'
 # initialize the app with the extension
 db.init_app(app)
 migrate.init_app(app, db)
@@ -60,11 +66,23 @@ class User(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
     first_name: Mapped[str] = mapped_column(String(50))
     last_name: Mapped[str] = mapped_column(unique=True, nullable=False)
+    email: Mapped[str] = mapped_column(unique=True, nullable=False)
+    password: Mapped[str]
     profile_picture: Mapped[str] = mapped_column(nullable=True)
     age: Mapped[int] = mapped_column(SmallInteger)
     address: Mapped[str]
     id_card: Mapped['IdCard'] = db.relationship('IdCard', back_populates='user', uselist=False)
     roles = db.relationship('Role', secondary=user_roles_m2m, backref=db.backref('users', lazy='dynamic'))
+    posts = db.relationship('Post', backref='user', lazy='dynamic', cascade='all, delete')
+
+    @classmethod
+    def authenticate(cls, email, password):
+        user = cls.query.filter_by(email=email, password=password).first()
+        return user
+
+    @property
+    def full_name(self):
+        return self.first_name + ' ' + self.last_name
 
 
 class Post(db.Model):
@@ -74,8 +92,7 @@ class Post(db.Model):
     content: Mapped[str]
     image: Mapped[str]
     created_at = mapped_column(DateTime, default=datetime.datetime.now)
-    user_id: Mapped[int] = mapped_column(db.ForeignKey('users.id', ondelete='CASCADE'))
-    user = db.relationship('User', backref='posts')
+    user_id: Mapped[int] = mapped_column(db.ForeignKey('users.id'))
 
 
 class IdCard(db.Model):
@@ -105,6 +122,29 @@ class Role(db.Model):
 #     print('Created Tables....')
 
 
+class CustomModelView(ModelView):
+
+    def is_accessible(self):
+        if not session.get('user_id'):
+            return False
+
+        user_id = session.get('user_id')
+        user = db.session.get(User, user_id)
+        roles = [role.title for role in user.roles]
+        if RoleEnum.ADMIN.value in roles:
+            return True
+        return False
+
+    def inaccessible_callback(self, name, **kwargs):
+        return redirect(url_for('login', next=request.url))
+
+
+admin.add_view(CustomModelView(User, db.session))
+admin.add_view(CustomModelView(Post, db.session))
+admin.add_view(CustomModelView(IdCard, db.session))
+admin.add_view(CustomModelView(Role, db.session))
+
+
 def remove_spaces(value: str):
     return value.replace(' ', '')
 
@@ -117,8 +157,34 @@ app.jinja_env.filters['remove_spaces'] = remove_spaces
 app.jinja_env.filters['square'] = square
 
 
+def is_not_authenticated(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        if session.get('user_id'):
+            return redirect('home')
+        return func(*args, **kwargs)
+
+    return wrapper
+
+
+def is_authenticated(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        if not session.get('user_id'):
+            return redirect('login')
+        return func(*args, **kwargs)
+
+    return wrapper
+
+
+@app.before_request
+def make_session_permanent():
+    session.permanent = True
+
+
 @app.route('/')
 @app.route('/home')
+@is_authenticated
 def home():
     first_name, last_name = 'Nugoooo', 'Svianadze'
     title = 'Home Page'
@@ -128,6 +194,7 @@ def home():
 
 
 @app.route('/features')
+@is_authenticated
 def features():
     title = 'fe atu r e s s'
     items = [1, 2, 3, 4, 5]
@@ -137,19 +204,28 @@ def features():
 
 
 @app.route('/login', methods=['GET', 'POST'])
+@is_not_authenticated
 def login():
     form = LoginForm()
     if request.method == 'POST':
 
-        if form.validate():
-            print('forma validuria')
+        if form.validate_on_submit():
+            email = form.email.data
+            password = form.password.data
+            user = User.authenticate(email, password)
+            if not user:
+                flash('Credentials Are Incorrect, Try Again!')
+                return redirect('login')
+
+            session['user_id'] = user.id
+            session['username'] = user.full_name
             return redirect(url_for('home'))
-        print(form.errors)
         return render_template('login.html', form=form)
     return render_template('login.html', form=form)
 
 
 @app.route('/register', methods=["POST", "GET"])
+@is_not_authenticated
 def register():
     form = RegistrationForm()
     if request.method == 'POST':
@@ -157,6 +233,8 @@ def register():
         if form.validate_on_submit():
             first_name = form.first_name.data
             last_name = form.last_name.data
+            email = form.email.data
+            password = form.password.data
             age = form.age.data
             address = form.address.data
             form_roles = form.roles.data
@@ -178,6 +256,7 @@ def register():
                 return render_template('register.html', form=form, user=user)
 
             user = User(first_name=first_name, last_name=last_name,
+                        email=email, password=password,
                         age=age, address=address, profile_picture=filename)
             user.roles.extend(db_roles)
             db.session.add(user)
@@ -190,6 +269,7 @@ def register():
 
 
 @app.route('/users')
+@is_authenticated
 def users():
     # stmt = db.select(User).where(User.age > 18).order_by(User.age)
     # user_data = db.session.execute(stmt).scalars().all()
@@ -295,6 +375,14 @@ def add_roles():
     db.session.commit()
     flash(f'roles {user_role.title} and {admin_role.title} successfully created!')
     return redirect(url_for('users'))
+
+
+@app.route('/logout')
+def logout():
+    session.pop('user_id', None)
+    session.pop('username', None)
+    flash('Succussfully Logged Out')
+    return redirect('login')
 
 
 app.secret_key = 'ansdjasndjasjdnajsd9123n1'
