@@ -20,7 +20,7 @@ from werkzeug.utils import secure_filename
 
 from forms import LoginForm, ContactForm, RegistrationForm, UserUpdateForm
 from forms import PostForm
-from enums import RoleEnum
+from enums import RoleEnum, StatusEnum
 
 app = Flask(__name__)
 
@@ -41,7 +41,7 @@ app.config['PERMANENT_SESSION_LIFETIME'] = datetime.timedelta(days=1)
 app.config['FLASK_ADMIN_SWATCH'] = 'cerulean'
 # initialize the app with the extension
 db.init_app(app)
-migrate.init_app(app, db)
+migrate.init_app(app, db, render_as_batch=True)
 
 
 user_roles_m2m = db.Table(
@@ -72,7 +72,7 @@ class User(db.Model):
     age: Mapped[int] = mapped_column(SmallInteger)
     address: Mapped[str]
     id_card: Mapped['IdCard'] = db.relationship('IdCard', back_populates='user', uselist=False)
-    roles = db.relationship('Role', secondary=user_roles_m2m, backref=db.backref('users', lazy='dynamic'))
+    roles = db.relationship('Role', secondary=user_roles_m2m, backref='users', lazy='dynamic')
     posts = db.relationship('Post', backref='user', lazy='dynamic', cascade='all, delete')
 
     @classmethod
@@ -83,6 +83,21 @@ class User(db.Model):
     @property
     def full_name(self):
         return self.first_name + ' ' + self.last_name
+
+
+class Dish(db.Model):
+    __tablename__ = 'dishes'
+    id: Mapped[int] = mapped_column(primary_key=True)
+    title: Mapped[str]
+
+
+class Order(db.Model):
+    __tablename__ = 'user_dishes'
+    user_id: Mapped[int] = mapped_column(db.ForeignKey('users.id'), primary_key=True)
+    dish_id: Mapped[int] = mapped_column(db.ForeignKey('dishes.id'), primary_key=True)
+    users = db.relationship('User', backref='orders')
+    dishes = db.relationship('Dish', backref='dishes')
+    status: Mapped[str] = mapped_column(default=StatusEnum.IN_PROGRESS.name)
 
 
 class Post(db.Model):
@@ -101,7 +116,7 @@ class IdCard(db.Model):
     id_number: Mapped[int]
     created_at = mapped_column(DateTime)
     expire_at = mapped_column(DateTime)
-    user_id: Mapped[int] = mapped_column(db.ForeignKey('users.id', ondelete='CASCADE'), unique=True)
+    user_id: Mapped[int] = mapped_column(db.ForeignKey('users.id'), unique=True)
     user = db.relationship('User', back_populates='id_card')
 
 
@@ -216,7 +231,6 @@ def login():
             if not user:
                 flash('Credentials Are Incorrect, Try Again!')
                 return redirect('login')
-
             session['user_id'] = user.id
             session['username'] = user.full_name
             return redirect(url_for('home'))
