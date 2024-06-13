@@ -74,6 +74,7 @@ class User(db.Model):
     id_card: Mapped['IdCard'] = db.relationship('IdCard', back_populates='user', uselist=False)
     roles = db.relationship('Role', secondary=user_roles_m2m, backref='users', lazy='dynamic')
     posts = db.relationship('Post', backref='user', lazy='dynamic', cascade='all, delete')
+    orders = db.relationship('Order', backref='user', lazy='dynamic')
 
     @classmethod
     def authenticate(cls, email, password):
@@ -89,14 +90,14 @@ class Dish(db.Model):
     __tablename__ = 'dishes'
     id: Mapped[int] = mapped_column(primary_key=True)
     title: Mapped[str]
+    orders = db.relationship('Order', backref='dish', lazy='dynamic')
 
 
 class Order(db.Model):
     __tablename__ = 'user_dishes'
-    user_id: Mapped[int] = mapped_column(db.ForeignKey('users.id'), primary_key=True)
-    dish_id: Mapped[int] = mapped_column(db.ForeignKey('dishes.id'), primary_key=True)
-    users = db.relationship('User', backref='orders')
-    dishes = db.relationship('Dish', backref='dishes')
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(db.ForeignKey('users.id'))
+    dish_id: Mapped[int] = mapped_column(db.ForeignKey('dishes.id'))
     status: Mapped[str] = mapped_column(default=StatusEnum.IN_PROGRESS.name)
 
 
