@@ -1,0 +1,8 @@
+flask==3.0.3
+flask_admin
+flask_sqlalchemy
+flask_migrate
+click
+flask-wtf
+faker
+email_validator
