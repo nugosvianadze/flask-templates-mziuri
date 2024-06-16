@@ -9,12 +9,11 @@ from app.user.models import User
 from app.blog.models import Role
 from app.decorators import is_not_authenticated, is_authenticated
 
-template_folder = os.path.abspath('app/user/templates')
 base_templates = os.path.abspath('app/templates')
-print(template_folder)
-user_bp = Blueprint('user', __name__, template_folder=template_folder, url_prefix='/user')
+print(base_templates)
+user_bp = Blueprint('user', __name__, template_folder=base_templates, url_prefix='/user')
 
-
+"""localhost:5000/user/login"""
 @user_bp.route('/login', methods=['GET', 'POST'])
 @is_not_authenticated
 def login():
@@ -32,8 +31,8 @@ def login():
             session['user_id'] = user.id
             session['username'] = user.full_name
             return redirect(url_for('blog.home'))
-        return render_template('login.html', form=form, base_templates=base_templates)
-    return render_template('login.html', form=form, base_templates=base_templates)
+        return render_template('user/login.html', form=form, base_templates=base_templates)
+    return render_template('user/login.html', form=form, base_templates=base_templates)
 
 
 @user_bp.route('/register', methods=["POST", "GET"])
@@ -61,11 +60,11 @@ def register():
             print(db_roles)
             if len(db_roles) != len(form_roles):
                 flash('Some Roles Does Not Exsist!!!')
-                return render_template('register.html', form=form, user=user)
+                return render_template('user/register.html', form=form, user=user)
 
             if user is not None:
                 flash('User With This First Name Already Exists!')
-                return render_template('register.html', form=form, user=user)
+                return render_template('user/register.html', form=form, user=user)
 
             user = User(first_name=first_name, last_name=last_name,
                         email=email, password=password,
@@ -76,8 +75,8 @@ def register():
             flash('User Successfully Created!!')
             return redirect(url_for('blog.home'))
         print(form.errors)
-        return render_template('register.html', form=form)
-    return render_template('register.html', form=form)
+        return render_template('user/register.html', form=form)
+    return render_template('user/register.html', form=form)
 
 
 @user_bp.route('/users')
@@ -98,7 +97,7 @@ def update_user(user_id):
     # user = db.get_or_404(User, user_id)
     if user is None:
         flash(f'User With ID={user_id} Does Not Exists!')
-        return redirect(url_for('users'))
+        return redirect(url_for('user.users'))
     if request.method == 'POST':
         first_name = form.first_name.data
         last_name = form.last_name.data
@@ -108,8 +107,8 @@ def update_user(user_id):
         user.age = age
         db.session.commit()
         flash('User Successfuly Updated!')
-        return redirect(url_for('update_user', user_id=user_id))
-    return render_template('user_update.html', form=form, user=user)
+        return redirect(url_for('user.update_user', user_id=user_id))
+    return render_template('user/user_update.html', form=form, user=user)
 
 
 @user_bp.route('/delete_user/<int:user_id>')
@@ -119,12 +118,12 @@ def delete_user(user_id):
     # user = db.get_or_404(User, user_id)
     if user is None:
         flash(f'User With ID={user_id} Does Not Exists!')
-        return redirect(url_for('users'))
+        return redirect(url_for('user.users'))
 
     db.session.delete(user)
     db.session.commit()
     flash(f'User {user.first_name} Successfully Deleted!!')
-    return redirect(url_for('users'))
+    return redirect(url_for('user.users'))
 
 
 @user_bp.route('/user-posts/<int:user_id>')
@@ -132,9 +131,9 @@ def user_posts(user_id):
     user = User.query.get(user_id)
     if not user:
         flash(f'User With ID={user_id} Does Not Exists!')
-        return redirect(url_for('users'))
+        return redirect(url_for('user.users'))
     posts = user.posts
-    return render_template('posts.html', posts=posts, user_id=user_id)
+    return render_template('user/posts.html', posts=posts, user_id=user_id)
 
 
 @user_bp.route('/logout')
@@ -142,4 +141,4 @@ def logout():
     session.pop('user_id', None)
     session.pop('username', None)
     flash('Succussfully Logged Out')
-    return redirect('login')
+    return redirect(url_for('user.login'))

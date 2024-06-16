@@ -11,9 +11,9 @@ from app.extensions import db
 from app.user.models import User
 from app.blog.models import Role, Post, IdCard
 
-template_folder = os.path.abspath('app/blog/templates')
-print(template_folder)
-blog_bp = Blueprint('blog', __name__, template_folder=template_folder, url_prefix='/blog')
+base_templates = os.path.abspath('app/templates')
+print(base_templates)
+blog_bp = Blueprint('blog', __name__, template_folder=base_templates, url_prefix='/blog')
 
 
 @blog_bp.route('/')
@@ -23,7 +23,7 @@ def home():
     first_name, last_name = 'Nugoooo', 'Svianadze'
     title = 'Home Page'
     my_num = 25
-    return render_template('index.html', first_name=first_name,
+    return render_template('blog/index.html', first_name=first_name,
                            last_name=last_name, title=title)
 
 
@@ -33,7 +33,7 @@ def features():
     title = 'fe atu r e s s'
     items = [1, 2, 3, 4, 5]
     my_num = 25
-    return render_template('features.html', title=title, items=items,
+    return render_template('blog/features.html', title=title, items=items,
                            my_num=my_num)
 
 
@@ -55,9 +55,9 @@ def create_post(user_id):
             db.session.commit()
             flash('Post Successfuly Added')
             return redirect(url_for('user.user_posts', user_id=user_id))
-        return render_template('create_post.html', form=form)
+        return render_template('blog/create_post.html', form=form)
 
-    return render_template('create_post.html', form=form, user_id=user_id)
+    return render_template('blog/create_post.html', form=form, user_id=user_id)
 
 
 @blog_bp.route('/create-id-card/<int:user_id>')
